@@ -1,0 +1,363 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="inventory-header">
+    <div class="header-title">
+        <h2><i class="fas fa-users"></i> Customers</h2>
+        <p>Manage your customer database efficiently</p>
+    </div>
+    <button class="btn-primary" onclick="openModal('addCustomerModal')">
+        <i class="fas fa-plus"></i> Add Customer
+    </button>
+</div>
+
+<!-- Customer Grid Layout -->
+<div class="customer-grid">
+    {% for customer in customers %}
+    <div class="customer-card">
+        <div class="card-header-actions">
+            <!-- Dynamic Avatar with Initials -->
+            <div class="avatar"
+                style="background-color: {{ ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'] | random }};">
+                {{ customer.customer_name[:1].upper() }}
+            </div>
+            <div class="customer-info">
+                <h3>{{ customer.customer_name }}</h3>
+                <span class="customer-id">ID: #{{ customer.customer_id }}</span>
+            </div>
+            <div class="card-actions">
+                <button class="btn-icon delete" onclick="deleteCustomer({{ customer.customer_id }})"
+                    title="Delete Customer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="info-row">
+                <i class="fas fa-phone-alt"></i>
+                <span>{{ customer.phone or 'No Phone' }}</span>
+            </div>
+            <div class="info-row">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ customer.city or 'No City' }}</span>
+            </div>
+        </div>
+
+        <div class="card-footer">
+            <button class="btn-secondary" onclick="window.location.href='tel:{{ customer.phone }}'">
+                <i class="fas fa-phone"></i> Call
+            </button>
+            <button class="btn-secondary" onclick="alert('Feature coming soon: View History')">
+                <i class="fas fa-history"></i> History
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="no-data">
+        <i class="fas fa-users-slash"></i>
+        <p>No customers found in database.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Customer Modal -->
+<div id="addCustomerModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('addCustomerModal')">&times;</span>
+        <h3>Add New Customer</h3>
+        <form action="{{ url_for('customers.add_customer') }}" method="POST">
+            <div class="form-group">
+                <label>Customer Name</label>
+                <input type="text" name="name" required placeholder="Enter full name">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" name="phone" placeholder="Enter phone number">
+            </div>
+            <div class="form-group">
+                <label>City</label>
+                <input type="text" name="city" placeholder="Enter city">
+            </div>
+            <button type="submit" class="btn-submit">Add Customer</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Header Styling */
+    .inventory-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .header-title h2 {
+        margin: 0;
+        font-size: 1.8rem;
+    }
+
+    .header-title p {
+        color: var(--text-secondary);
+        margin: 5px 0 0 0;
+        font-size: 0.9rem;
+    }
+
+    /* Grid Layout */
+    .customer-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
+    }
+
+    /* Card Styling */
+    .customer-card {
+        background-color: var(--card-bg);
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--border-color);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .customer-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        border-color: var(--primary-color);
+    }
+
+    /* Card Header */
+    .card-header-actions {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-right: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .customer-info h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .customer-id {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .card-actions {
+        margin-left: auto;
+    }
+
+    /* Card Body */
+    .card-body {
+        margin-bottom: 20px;
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+        padding: 15px 0;
+    }
+
+    .info-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+    }
+
+    .info-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .info-row i {
+        width: 25px;
+        color: var(--primary-color);
+    }
+
+    /* Card Footer */
+    .card-footer {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-secondary {
+        flex: 1;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-secondary:hover {
+        background: var(--bg-dark);
+        color: var(--text-primary);
+        border-color: var(--primary-color);
+    }
+
+    /* No Data State */
+    .no-data {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 50px;
+        color: var(--text-secondary);
+        background: var(--card-bg);
+        border-radius: 16px;
+        border: 1px dashed var(--border-color);
+    }
+
+    .no-data i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+
+    /* Modal Tweaks */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+        background-color: var(--card-bg);
+        margin: 5% auto;
+        padding: 30px;
+        border: 1px solid var(--border-color);
+        width: 400px;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .close {
+        color: var(--text-secondary);
+        float: right;
+        font-size: 28px;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .close:hover {
+        color: var(--danger-color);
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 12px;
+        background: var(--bg-dark);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-primary);
+        box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+
+    .btn-submit {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-submit:hover {
+        background-color: #4f46e5;
+    }
+</style>
+
+<script>
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = "block";
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function (event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
+        }
+    }
+
+    async function deleteCustomer(id) {
+        if (!confirm('Are you sure you want to delete this customer? This cannot be undone.')) return;
+
+        try {
+            const response = await fetch(`/delete_customer/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Try using a global toast function if available, otherwise just reload
+                if (typeof showToast === 'function') {
+                    showToast('Customer deleted successfully', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    alert('Customer deleted successfully');
+                    window.location.reload();
+                }
+            } else {
+                alert('Error deleting customer: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to delete customer');
+        }
+    }
+</script>
+{% endblock %}

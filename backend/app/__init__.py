@@ -10,6 +10,32 @@ def create_app():
     static_dir = os.path.join(frontend_dir, 'static')
     
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+    
+    # Enable Debugging to see errors on Vercel
+    app.config['DEBUG'] = True
+    app.config['PROPAGATE_EXCEPTIONS'] = True
+
+    # Debug route to check environment
+    @app.route('/debug-info')
+    def debug_info():
+        import os
+        cwd = os.getcwd()
+        try:
+            frontend_ls = str(os.listdir(frontend_dir))
+            template_ls = str(os.listdir(template_dir))
+        except Exception as e:
+            frontend_ls = f"Error: {e}"
+            template_ls = "N/A"
+            
+        return {
+            "cwd": cwd,
+            "base_dir": base_dir,
+            "frontend_dir": frontend_dir,
+            "template_dir": template_dir,
+            "frontend_files": frontend_ls,
+            "template_files": template_ls,
+            "env_vars": [k for k in os.environ.keys() if 'DATABASE' in k or 'SECRET' in k]
+        }
     flask_cors.CORS(app)
     
     # Configuration

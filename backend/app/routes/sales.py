@@ -114,6 +114,12 @@ def create_sale():
     conn = get_db_connection()
     try:
         cur = conn.cursor()
+
+        # Schema compatibility patch for older/reset databases.
+        # Some deployments have sales table without POS columns.
+        cur.execute("ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_id INTEGER")
+        cur.execute("ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_id INTEGER")
+        cur.execute("ALTER TABLE sales ADD COLUMN IF NOT EXISTS price_per_unit NUMERIC(10,2)")
         
         # 1. Handle Customer
         customer_id = None

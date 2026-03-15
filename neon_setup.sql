@@ -43,8 +43,11 @@ CREATE TABLE customers (
 
 CREATE TABLE sales (
     sale_id SERIAL PRIMARY KEY,
+    invoice_id INTEGER,
     medicine_id INTEGER REFERENCES medicines(medicine_id),
+    customer_id INTEGER,
     quantity INTEGER,
+    price_per_unit NUMERIC(10,2),
     total_amount NUMERIC(10,2),
     sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     payment_mode VARCHAR(50) DEFAULT 'Cash',

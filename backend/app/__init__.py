@@ -3,8 +3,13 @@ import flask_cors # type: ignore
 import os
 
 def create_app():
-    # Point table/static to the root folders
-    app = Flask(__name__, template_folder='../../frontend/templates', static_folder='../../frontend/static')
+    # Determine absolute paths for templates and static files
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    frontend_dir = os.path.join(base_dir, '../../frontend')
+    template_dir = os.path.join(frontend_dir, 'templates')
+    static_dir = os.path.join(frontend_dir, 'static')
+    
+    app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
     flask_cors.CORS(app)
     
     # Configuration

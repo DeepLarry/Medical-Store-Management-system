@@ -10,6 +10,10 @@ def get_db_connection():
         db_url = os.environ.get('DATABASE_URL')
         
         if db_url:
+            # Ensure SSL mode is enabled for Neon/Vercel if not already in URL
+            if 'sslmode' not in db_url and 'localhost' not in db_url:
+                db_url += '?sslmode=require'
+                
             conn = psycopg2.connect(db_url)
             return conn
         else:

@@ -22,15 +22,23 @@ def login():
             user = cur.fetchone()
             conn.close()
             
-            if user and check_password_hash(user[2], password):
-                session['user_id'] = user[0]
-                session['username'] = user[1]
-                # Store SaaS context in session
-                session['role'] = user[3] if user[3] else 'admin' 
-                session['store_id'] = user[4]
-                return redirect(url_for('dashboard.dashboard'))
+            if user:
+                # Debugging: Check hash directly
+                is_valid = check_password_hash(user[2], password)
+                
+                if is_valid:
+                    session['user_id'] = user[0]
+                    session['username'] = user[1]
+                    # Store SaaS context in session
+                    session['role'] = user[3] if user[3] else 'admin' 
+                    session['store_id'] = user[4]
+                    return redirect(url_for('dashboard.dashboard'))
+                else:
+                    # Detailed debug error for Vercel
+                    flash(f'Debug: Password mismatch. Stored hash prefix: {user[2][:15]}...', 'error')
+                    return redirect(url_for('auth.login'))
             else:
-                flash('Invalid username/email or password', 'error')
+                flash(f'Debug: User "{identifier}" not found in database.', 'error')
                 return redirect(url_for('auth.login'))
         except Exception as e:
             flash(f'An error occurred: {str(e)}', 'error')

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | PharmaAdmin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="login-body">
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fas fa-heartbeat"></i>
+            <h2>Deep Medical Store</h2>
+            <p>Admin Portal - Created by Deep Tiwari</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert">
+            {{ messages[0] }}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('auth.login') }}" method="POST">
+            <div class="form-group">
+                <label
+                    style="text-align: left; display: block; color: var(--text-secondary); margin-bottom: 5px;">Username</label>
+                <input type="text" name="username" class="form-control" placeholder="admin" required
+                    style="background: rgba(255, 255, 255, 0.05); color: white;">
+            </div>
+            <div class="form-group" style="margin-top: 15px;">
+                <label
+                    style="text-align: left; display: block; color: var(--text-secondary); margin-bottom: 5px;">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required
+                    style="background: rgba(255, 255, 255, 0.05); color: white;">
+            </div>
+            <button type="submit" class="btn-login">Sign In</button>
+        </form>
+    </div>
+</body>
+
+</html>

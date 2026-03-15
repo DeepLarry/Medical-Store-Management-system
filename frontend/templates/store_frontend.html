@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Deep Medical Store - POS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='store.css') }}">
+</head>
+
+<body>
+
+    <div class="pos-container">
+        <!-- LEFT PANEL: Product Selection -->
+        <aside class="product-panel">
+            <header class="panel-header">
+                <div class="brand">
+                    <i class="fas fa-capsules"></i>
+                    <h1>POS Terminal</h1>
+                </div>
+                <div class="controls">
+                    <button id="themeToggle" onclick="toggleFrontendTheme()" class="icon-btn" title="Theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <a href="{{ url_for('dashboard.dashboard') }}" class="icon-btn" title="Dashboard">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </header>
+
+            <div class="search-section">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Scan barcode or search medicine (F2)..."
+                        autocomplete="off">
+                    <i class="fas fa-barcode scanner-icon"></i>
+                </div>
+                <div id="suggestions" class="suggestions-dropdown"></div>
+            </div>
+
+            <div class="category-scroll">
+                <button class="cat-pill active" onclick="filterCategory('All')">All</button>
+                <button class="cat-pill" onclick="filterCategory('Tablet')">Tablets</button>
+                <button class="cat-pill" onclick="filterCategory('Syrup')">Syrups</button>
+                <button class="cat-pill" onclick="filterCategory('Injection')">Injections</button>
+                <button class="cat-pill" onclick="filterCategory('Cream')">Creams</button>
+                <button class="cat-pill" onclick="filterCategory('General')">General</button>
+            </div>
+
+            <div class="product-grid" id="productGrid">
+                <!-- Product Cards Injected Here -->
+            </div>
+        </aside>
+
+        <!-- RIGHT PANEL: Cart & Checkout -->
+        <main class="cart-panel">
+            <div class="cart-top">
+                <div class="cart-title">
+                    <h2>Current Bill</h2>
+                    <span class="badge" id="itemCount">0 Items</span>
+                </div>
+                <div class="cart-actions">
+                    <button class="action-btn" onclick="clearCart()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="action-btn" onclick="holdBill()">
+                        <i class="fas fa-pause"></i>
+                    </button>
+                    <button class="action-btn" onclick="viewRecentBills()">
+                        <i class="fas fa-history"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="cart-list" id="cartItems">
+                <div class="empty-cart">
+                    <i class="fas fa-shopping-basket shadow-icon"></i>
+                    <p>Cart is empty</p>
+                    <small>Search or scan items to add</small>
+                </div>
+            </div>
+
+            <div class="checkout-area">
+                <div class="customer-info">
+                    <div class="input-icon">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="customerName" placeholder="Customer Name">
+                    </div>
+                    <div class="input-icon">
+                        <i class="fas fa-phone"></i>
+                        <input type="tel" id="customerPhone" placeholder="Mobile Number">
+                    </div>
+                </div>
+
+                <div class="payment-options">
+                    <label class="pay-option">
+                        <input type="radio" name="payment" value="Cash" checked>
+                        <span>Cash</span>
+                    </label>
+                    <label class="pay-option">
+                        <input type="radio" name="payment" value="UPI">
+                        <span>UPI</span>
+                    </label>
+                    <label class="pay-option">
+                        <input type="radio" name="payment" value="Card">
+                        <span>Card</span>
+                    </label>
+                </div>
+
+                <div class="bill-summary">
+                    <div class="row">
+                        <span>Subtotal</span>
+                        <span class="val">₹<span id="subTotal">0.00</span></span>
+                    </div>
+                    <div class="row">
+                        <span>Discount</span>
+                        <div class="discount-input">
+                            <span>₹</span>
+                            <input type="number" id="discountInput" placeholder="0" oninput="renderCart()">
+                        </div>
+                    </div>
+                    <div class="row total">
+                        <span>Total Payable</span>
+                        <span class="val">₹<span id="cartTotal">0.00</span></span>
+                    </div>
+                </div>
+
+                <button class="checkout-btn" onclick="checkout()">
+                    <div class="btn-content">
+                        <span>Checkout</span>
+                        <span class="btn-total">₹<span id="btnTotal">0.00</span></span>
+                    </div>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Recent Bills -->
+    <div id="modalOverlay" class="modal-overlay" style="display: none;" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Recent Bills</h3>
+                <button onclick="closeModal()" class="icon-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                Loading...
+            </div>
+        </div>
+    </div>
+
+    <div class="frontend-footer"
+        style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.8rem; margin-top: auto;">
+        <p>POS System &copy; 2026 Deep Medical Store - Developed by <strong>Deep Tiwari</strong></p>
+    </div>
+
+    <!-- Hidden Data -->
+    <script id="frontend-data" type="application/json">
+        {{ medicines | tojson }}
+    </script>
+    <script>
+        const CONFIG = {
+            medicines: JSON.parse(document.getElementById('frontend-data').textContent),
+            createSaleUrl: "{{ url_for('sales.create_sale') }}"
+        };
+    </script>
+    <script src="{{ url_for('static', filename='store.js') }}"></script>
+</body>
+
+</html>

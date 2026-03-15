@@ -1,0 +1,167 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="page-header">
+        <h2><i class="fas fa-cog"></i> Settings</h2>
+        <p>Manage your pharmacy store profile and configurations.</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="settings-tabs">
+        <button type="button" class="tab-btn active" onclick="openTab('general', this)"><i class="fas fa-store"></i>
+            General
+            Profile</button>
+        <button type="button" class="tab-btn" onclick="openTab('security', this)"><i class="fas fa-shield-alt"></i>
+            Security</button>
+        <button type="button" class="tab-btn" onclick="openTab('subscription', this)"><i class="fas fa-crown"></i>
+            Subscription
+            (Pro)</button>
+    </div>
+
+    <!-- General Settings Tab -->
+    <div id="general" class="tab-content active">
+        <div class="settings-card">
+            <h3>Store Information</h3>
+            <form action="{{ url_for('settings.settings') }}" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Store Name</label>
+                        <input type="text" name="store_name" value="{{ settings.get('store_name', 'PharmaAdmin') }}"
+                            required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" name="phone" value="{{ settings.get('phone', '') }}"
+                            placeholder="+91 98765 43210" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" name="address" value="{{ settings.get('address', '') }}"
+                            placeholder="123 Health St, Medical City" class="form-control">
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 2rem;">Billing Configuration</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Currency Symbol</label>
+                        <select name="currency" class="form-control">
+                            <option value="₹" {% if settings.get('currency_symbol')=='₹' %}selected{% endif %}>₹ (INR)
+                            </option>
+                            <option value="$" {% if settings.get('currency_symbol')=='$' %}selected{% endif %}>$ (USD)
+                            </option>
+                            <option value="€" {% if settings.get('currency_symbol')=='€' %}selected{% endif %}>€ (EUR)
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tax Rate (%)</label>
+                        <input type="number" step="0.01" name="tax_rate" value="{{ settings.get('tax_rate', 18.00) }}"
+                            class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 30px; text-align: right;">
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Security Tab -->
+    <div id="security" class="tab-content">
+        <div class="settings-card">
+            <h3>Change Password</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">Ensure your account is using a strong
+                password.</p>
+            <form>
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" name="current_password" disabled placeholder="Feature coming soon"
+                        class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" name="new_password" disabled placeholder="Feature coming soon"
+                        class="form-control">
+                </div>
+                <button type="button" class="btn-secondary" disabled>Update Password</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Subscription Tab (SaaS Teaser) -->
+    <div id="subscription" class="tab-content">
+        <div class="settings-card">
+            <div class="subscription-header" style="margin-bottom: 20px; text-align: center;">
+                <h3>Current Plan: <span class="badge success">Free Tier</span></h3>
+                <p>You are currently using the free version of PharmaAdmin.</p>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- Free Plan -->
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <h4>Starter</h4>
+                        <span class="plan-price">Free</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check"></i> Basic Inventory</li>
+                        <li><i class="fas fa-check"></i> POS System</li>
+                        <li><i class="fas fa-check"></i> 1 User Account</li>
+                    </ul>
+                    <button class="btn-secondary" disabled>Current Plan</button>
+                </div>
+
+                <!-- Pro Plan -->
+                <div class="plan-card featured">
+                    <div class="plan-header">
+                        <h4>Professional</h4>
+                        <span class="plan-price">₹999<small
+                                style="font-size: 1rem; font-weight: normal; color: var(--text-secondary);">/mo</small></span>
+                    </div>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check"></i> Unlimited Inventory</li>
+                        <li><i class="fas fa-check"></i> Multi-User Support</li>
+                        <li><i class="fas fa-check"></i> Advanced Analytics</li>
+                        <li><i class="fas fa-check"></i> Whitelabeling</li>
+                    </ul>
+                    <button type="button" class="btn-primary" onclick="upgradePro()">Upgrade to Pro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function upgradePro() {
+        alert('Pro features coming soon!');
+    }
+
+    function openTab(tabName, btn) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        // Deactivate all buttons
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.remove('active');
+        });
+
+        // Show specific tab
+        const targetTab = document.getElementById(tabName);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
+
+        // Activate button
+        if (btn) {
+            btn.classList.add('active');
+        }
+    }
+</script>
+{% endblock %}

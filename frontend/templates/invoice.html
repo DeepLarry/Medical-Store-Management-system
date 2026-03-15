@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #{{ invoice.invoice_id }}</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            width: 300px;
+            margin: 0 auto;
+            padding: 10px;
+            background: #fff;
+            color: #000;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .store-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .details {
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 2px 0;
+        }
+
+        .total-row {
+            border-top: 1px dashed #000;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 5px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+        }
+
+        @media print {
+            body {
+                width: 100%;
+                margin: 0;
+            }
+
+            .no-print {
+                display: none;
+            }
+        }
+
+        .btn-print {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #000;
+            color: #fff;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <button onclick="window.print()" class="btn-print no-print">PRINT RECEIPT</button>
+
+    <div class="header">
+        <div class="store-name">OYE_DEEP FARAMA STORE</div>
+        <div>Address Line 1, City</div>
+        <div>Phone: 123-456-7890</div>
+    </div>
+
+    <div class="details">
+        <div>Inv #: {{ invoice.invoice_id }}</div>
+        <div>Date: {{ invoice.sale_date }}</div>
+        <div>Customer: {{ invoice.customer_name }}</div>
+        <div>Mode: {{ invoice.payment_mode }}</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40%">Item</th>
+                <th style="width: 20%">Qty</th>
+                <th style="width: 20%">Price</th>
+                <th style="width: 20%; text-align: right;">Amt</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.medicine_name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.price_per_unit }}</td>
+                <td style="text-align: right;">{{ item.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="total-row">
+        {% if invoice.discount and invoice.discount > 0 %}
+        <div style="display: flex; justify-content: space-between; font-weight: normal;">
+            <span>Subtotal:</span>
+            <span>₹{{ "%.2f"|format(invoice.total_amount|float + invoice.discount|float) }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-weight: normal;">
+            <span>Discount:</span>
+            <span>-₹{{ "%.2f"|format(invoice.discount) }}</span>
+        </div>
+        <div
+            style="border-top: 1px dashed #000; margin-top: 5px; padding-top: 5px; display: flex; justify-content: space-between; font-weight: bold;">
+            <span>TOTAL:</span>
+            <span>₹{{ "%.2f"|format(invoice.total_amount) }}</span>
+        </div>
+        {% else %}
+        <div style="display: flex; justify-content: space-between;">
+            <span>TOTAL:</span>
+            <span>₹{{ "%.2f"|format(invoice.total_amount) }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="footer">
+        <p>Thank You! Get Well Soon.</p>
+        <p>No Returns without Receipt</p>
+    </div>
+</body>
+
+</html>

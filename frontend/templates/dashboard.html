@@ -1,0 +1,389 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<!-- KPI Stats Grid -->
+<div class="dashboard-grid">
+
+    <!-- Live Activity Feed -->
+    <div class="kpi-card live-feed-card">
+        <div class="live-feed-header">
+            <h3><i class="fas fa-satellite-dish pulse-animation"></i> Live Activity</h3>
+        </div>
+        <div id="live-activity-list" class="activity-list">
+            <div class="activity-item"
+                style="justify-content: center; font-style: italic; color: var(--text-secondary);">
+                Waiting for transactions...
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Sales Stat -->
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(14, 165, 233, 0.2); color: #0ea5e9;">
+            <i class="fas fa-pills"></i>
+        </div>
+        <div class="kpi-info">
+            <h3>Total Sales</h3>
+            <h2 id="total-sales">Loading...</h2>
+            <span class="badge success" style="position: relative; top: auto; right: auto; margin-top: 5px;">
+                +12.5% <i class="fas fa-arrow-up"></i>
+            </span>
+        </div>
+    </div>
+
+    <!-- Medicines Stat -->
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+            <i class="fas fa-boxes"></i>
+        </div>
+        <div class="kpi-info">
+            <h3>Total Medicines</h3>
+            <h2 id="total-medicines">Loading...</h2>
+            <span class="badge warning" style="position: relative; top: auto; right: auto; margin-top: 5px;">
+                0% <i class="fas fa-minus"></i>
+            </span>
+        </div>
+    </div>
+
+    <!-- Profit Stat -->
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+            <i class="fas fa-coins"></i>
+        </div>
+        <div class="kpi-info">
+            <h3>Net Profit</h3>
+            <h2 id="net-profit">Loading...</h2>
+            <span class="badge success" style="position: relative; top: auto; right: auto; margin-top: 5px;">
+                Realtime <i class="fas fa-chart-line"></i>
+            </span>
+        </div>
+    </div>
+
+    <!-- Low Stock Stat -->
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="kpi-info">
+            <h3>Low Stock</h3>
+            <h2 id="low-stock-count">Loading...</h2>
+            <span class="badge danger" style="position: relative; top: auto; right: auto; margin-top: 5px;">
+                Alert
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="charts-section">
+    <div class="chart-card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-area"></i> Monthly Revenue & Profit</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="monthlySalesChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="card-header">
+            <h3><i class="fas fa-star"></i> Top Selling Medicines</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="topMedicinesChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Tables Section -->
+<div class="tables-section">
+    <div class="table-card">
+        <div class="card-header">
+            <h3><i class="fas fa-clipboard-list"></i> Low Stock Alert</h3>
+            <a href="{{ url_for('inventory.inventory') }}" class="btn-primary"
+                style="padding: 5px 10px; font-size: 0.8rem;">View All</a>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Medicine Name</th>
+                        <th>Stock</th>
+                        <th>Supplier</th>
+                        <th>Expiry</th>
+                    </tr>
+                </thead>
+                <tbody id="low-stock-body">
+                    <!-- Javascript will populate this -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="card-header">
+            <h3><i class="fas fa-hourglass-end"></i> Expiring Soon</h3>
+            <a href="{{ url_for('inventory.inventory') }}" class="btn-primary"
+                style="padding: 5px 10px; font-size: 0.8rem;">View All</a>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Medicine</th>
+                        <th>Batch</th>
+                        <th>Expiry</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="expiry-medicines-body">
+                    <!-- Javascript will populate this -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="table-card">
+        <div class="card-header">
+            <h3><i class="fas fa-truck"></i> Top Suppliers</h3>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Supplier</th>
+                        <th>Orders</th>
+                        <th>Total Value</th>
+                        <th>Pending</th>
+                    </tr>
+                </thead>
+                <tbody id="supplier-stats-body">
+                    <!-- Javascript will populate this -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Live Activity Polling
+    let lastActivityId = null;
+
+    async function fetchLiveActivity() {
+        const list = document.getElementById('live-activity-list');
+        try {
+            const response = await fetch("/live_activity");
+            if (!response.ok) return;
+
+            const activities = await response.json();
+
+            if (activities.length > 0) {
+                // Clear placeholder if it exists
+                if (list.innerText.includes('Waiting for transactions')) {
+                    list.innerHTML = '';
+                }
+
+                const latest = activities[0];
+                if (latest.id !== lastActivityId) {
+                    lastActivityId = latest.id;
+                    list.innerHTML = '';
+
+                    activities.forEach(act => {
+                        const div = document.createElement('div');
+                        div.className = 'activity-item';
+                        div.innerHTML = `
+                            <div>
+                                <span class="activity-msg">${act.message}</span>
+                                <span class="activity-time"><i class="far fa-clock"></i> ${act.time}</span>
+                            </div>
+                            <span class="activity-amount" style="color: ${act.amount > 0 ? 'var(--success-color)' : 'var(--danger-color)'}">
+                                ${act.amount > 0 ? '+' : ''}₹${act.amount}
+                            </span>
+                        `;
+                        list.appendChild(div);
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Live feed error", e);
+        }
+    }
+
+    // --- DASHBOARD INTEGRATION LOGIC (Inlined for reliability) ---
+
+    // Core Fetch Functions
+    function fetchDashboardStats() {
+        console.log("Fetching Stats...");
+        const salesEl = document.getElementById('total-sales');
+        if (!salesEl) return;
+
+        // Indicate loading started if stuck
+        if (salesEl.innerText === 'Loading...') salesEl.innerText = 'Syncing...';
+
+        fetch('/api/dashboard/stats')
+            .then(response => {
+                if (!response.ok) throw new Error('Status ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                updateElement('total-sales', formatCurrency(data.total_sales));
+                updateElement('total-medicines', data.total_medicines);
+                updateElement('net-profit', formatCurrency(data.net_profit));
+                updateElement('low-stock-count', data.low_stock_count);
+            })
+            .catch(error => {
+                console.error('Stats fetch failed:', error);
+                updateElement('total-sales', 'Err');
+                updateElement('total-medicines', 'Err');
+                updateElement('net-profit', 'Err');
+            });
+    }
+
+    function fetchSalesChart() {
+        fetch('/api/dashboard/analytics/monthly')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.error) renderSalesChart(data);
+            })
+            .catch(e => console.error(e));
+    }
+
+    function fetchTopProducts() {
+        const ctx = document.getElementById('topMedicinesChart');
+        if (!ctx) return;
+        fetch('/api/dashboard/top-products')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.error) renderTopProductsChart(ctx, data);
+            })
+            .catch(e => console.error(e));
+    }
+
+    function fetchLowStock() {
+        fetchDataAndPopulateTable('/api/dashboard/alerts?limit=5', 'low-stock-body', (item) => `
+             <td>
+                <div style="font-weight: 500;">${item.medicine_name}</div>
+                <small style="color: var(--text-secondary); font-size: 0.75rem;">Min: ${item.min_stock}</small>
+            </td>
+            <td><span class="badge ${item.current_stock === 0 ? 'danger' : 'warning'}">${item.current_stock}</span></td>
+            <td>${item.supplier_name}</td>
+            <td>${item.expiry_date}</td>
+        `);
+    }
+
+    function fetchExpiryAlerts() {
+        fetchDataAndPopulateTable('/api/dashboard/expiry?limit=5', 'expiry-medicines-body', (item) => `
+            <td><div style="font-weight: 500;">${item.medicine_name}</div></td>
+            <td><small>${item.batch_number || 'N/A'}</small></td>
+            <td>${item.expiry_date}</td>
+            <td>${item.stock}</td>
+            <td><span class="badge ${item.status === 'Expired' ? 'danger' : 'warning'}" style="font-size: 0.75rem;">${item.status}</span></td>
+        `);
+    }
+
+    function fetchSupplierInsights() {
+        fetchDataAndPopulateTable('/api/dashboard/suppliers', 'supplier-stats-body', (item) => `
+          <td>${item.supplier_name}</td>
+          <td>${item.total_orders}</td>
+          <td>${formatCurrency(item.total_purchase_value)}</td>
+          <td class="${item.pending_amount > 0 ? 'text-danger' : 'text-success'}">${formatCurrency(item.pending_amount)}</td>
+      `);
+    }
+
+    // Helper Functions
+    function updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+            element.classList.remove('loading');
+        }
+    }
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
+    }
+
+    function fetchDataAndPopulateTable(url, bodyId, rowGenerator) {
+        const body = document.getElementById(bodyId);
+        if (!body) return;
+        fetch(url).then(r => r.json()).then(data => {
+            if (data.error || !Array.isArray(data) || data.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px;">No Data</td></tr>';
+                return;
+            }
+            body.innerHTML = '';
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = rowGenerator(item);
+                body.appendChild(tr);
+            });
+        }).catch(e => console.error(e));
+    }
+
+    function renderSalesChart(data) {
+        const ctx = document.getElementById('monthlySalesChart');
+        if (!ctx || typeof Chart === 'undefined') return;
+
+        let chartData = {
+            labels: data.labels || [],
+            datasets: [
+                { label: 'Revenue', data: data.revenue || [], borderColor: '#0ea5e9', tension: 0.3 },
+                { label: 'Profit', data: data.profit || [], borderColor: '#10b981', tension: 0.3 }
+            ]
+        };
+
+        new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function renderTopProductsChart(ctx, data) {
+        if (typeof Chart === 'undefined') return;
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Sold',
+                    data: data.quantities,
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)'
+                }]
+            },
+            options: { indexAxis: 'y', responsive: true }
+        });
+    }
+
+    // Initialize scripts
+    document.addEventListener("DOMContentLoaded", () => {
+        console.log("Dashboard Inline Script Loaded");
+        try {
+            // Start live polling
+            if (document.getElementById('live-activity-list')) {
+                fetchLiveActivity();
+                setInterval(fetchLiveActivity, 5000); // 5 sec is enough
+            }
+
+            // Run Dashboard Sync
+            fetchDashboardStats();
+            fetchSalesChart();
+            fetchTopProducts();
+            fetchLowStock();
+            fetchExpiryAlerts();
+            fetchSupplierInsights();
+
+        } catch (e) {
+            console.error("Critical Dashboard Error:", e);
+            alert("Dashboard Error: " + e.message);
+        }
+    });
+</script>
+{% endblock %}

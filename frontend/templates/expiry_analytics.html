@@ -1,0 +1,532 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="expiry-dashboard">
+    <div class="inventory-header">
+        <div class="header-title">
+            <h2><i class="fas fa-chart-pie"></i> Expiry Intelligence</h2>
+            <p>Predictive analytics to minimize inventory loss.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-primary" onclick="window.print()">
+                <i class="fas fa-file-pdf"></i> Download Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="dashboard-stats modern-stats">
+        <!-- Card 1: Expired Loss -->
+        <div class="stat-card loss-card">
+            <div class="card-content">
+                <div class="icon-box danger">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <div class="text-box">
+                    <h3>Realized Loss</h3>
+                    <p class="value">₹{{ "{:,.2f}".format(expired_loss) }}</p>
+                    <span class="subtext">{{ expired|length }} expired items</span>
+                </div>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar danger" style="width: {{ (expired|length / 100) * 100 }}%"></div>
+            </div>
+        </div>
+
+        <!-- Card 2: Risk Value -->
+        <div class="stat-card risk-card">
+            <div class="card-content">
+                <div class="icon-box warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="text-box">
+                    <h3>At Risk (< 30 Days)</h3>
+                            <p class="value">₹{{ "{:,.2f}".format(critical_risk) }}</p>
+                            <span class="subtext">{{ critical|length }} items need action</span>
+                </div>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar warning" style="width: {{ (critical|length / 100) * 100 }}%"></div>
+            </div>
+        </div>
+
+        <!-- Card 3: Safe But Soon -->
+        <div class="stat-card safe-card">
+            <div class="card-content">
+                <div class="icon-box info">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="text-box">
+                    <h3>Upcoming (30-90 Days)</h3>
+                    <p class="value">{{ upcoming|length }} Items</p>
+                    <span class="subtext">Plan sales or returns</span>
+                </div>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar info" style="width: {{ (upcoming|length / 100) * 100 }}%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="custom-tabs">
+        <button class="tab-link active" onclick="openTab(event, 'Expired')">
+            <span class="indicator danger"></span>
+            Expired Stock
+            <span class="counter">{{ expired|length }}</span>
+        </button>
+        <button class="tab-link" onclick="openTab(event, 'Critical')">
+            <span class="indicator warning"></span>
+            High Risk
+            <span class="counter">{{ critical|length }}</span>
+        </button>
+        <button class="tab-link" onclick="openTab(event, 'Upcoming')">
+            <span class="indicator info"></span>
+            Upcoming
+            <span class="counter">{{ upcoming|length }}</span>
+        </button>
+    </div>
+
+    <!-- Content: Expired -->
+    <div id="Expired" class="tab-content" style="display: block;">
+        {% if expired %}
+        <div class="modern-table-card">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Medicine</th>
+                        <th>Category</th>
+                        <th>Expired On</th>
+                        <th>Stock Left</th>
+                        <th>Loss Value</th>
+                        <th class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in expired %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ item.medicine_name }}</div>
+                            <div class="text-muted text-xs">{{ item.sku or 'No SKU' }}</div>
+                        </td>
+                        <td><span class="badge-pill">{{ item.category }}</span></td>
+                        <td class="text-danger fw-600">{{ item.expiry_date }}</td>
+                        <td>{{ item.stock }}</td>
+                        <td>₹{{ "{:,.2f}".format(item.purchase_price * item.stock) }}</td>
+                        <td class="text-right">
+                            <button class="btn-sm btn-danger-outline"
+                                onclick="deleteMedicine('{{ item.medicine_id }}')">
+                                <i class="fas fa-trash"></i> Discard
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state-modern">
+            <div class="empty-icon success"><i class="fas fa-check-circle"></i></div>
+            <h3>Zero Expired Stock!</h3>
+            <p>Your inventory is healthy and optimized.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Content: Critical -->
+    <div id="Critical" class="tab-content" style="display: none;">
+        {% if critical %}
+        <div class="modern-table-card">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Medicine</th>
+                        <th>Stock</th>
+                        <th>Expires In</th>
+                        <th>Risk Value</th>
+                        <th class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in critical %}
+                    <tr>
+                        <td class="fw-bold">{{ item.medicine_name }}</td>
+                        <td>{{ item.stock }}</td>
+                        <td>
+                            {% set days = (item.expiry_date - today).days %}
+                            <div class="expiry-timer warning">
+                                <i class="fas fa-clock"></i> {{ days }} Days
+                            </div>
+                        </td>
+                        <td>₹{{ "{:,.2f}".format(item.purchase_price * item.stock) }}</td>
+                        <td class="text-right">
+                            <button class="btn-sm btn-primary-outline"
+                                onclick="returnToSupplier('{{ item.medicine_id }}')">
+                                <i class="fas fa-undo"></i> Return
+                            </button>
+                            <button class="btn-sm btn-success-outline"
+                                onclick="discountSale('{{ item.medicine_id }}', '{{ item.medicine_name }}')">
+                                <i class="fas fa-tags"></i> Flash Sale
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state-modern">
+            <div class="empty-icon info"><i class="fas fa-shield-alt"></i></div>
+            <h3>No Critical Risks</h3>
+            <p>No medicines are expiring in the next 30 days.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Content: Upcoming -->
+    <div id="Upcoming" class="tab-content" style="display: none;">
+        <div class="modern-table-card">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Medicine</th>
+                        <th>Supplier</th>
+                        <th>Stock</th>
+                        <th>Expires On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in upcoming %}
+                    <tr>
+                        <td class="fw-bold">{{ item.medicine_name }}</td>
+                        <td>{{ item.supplier_id }}</td>
+                        <td>{{ item.stock }}</td>
+                        <td>{{ item.expiry_date }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not upcoming %}
+                    <tr>
+                        <td colspan="4" class="text-center p-4">No data available for 30-90 days range.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Scoped Styles for Expiry Page */
+    .expiry-dashboard {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .modern-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .card-content {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .icon-box {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .icon-box.danger {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .icon-box.warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+    }
+
+    .icon-box.info {
+        background: rgba(56, 189, 248, 0.1);
+        color: #38bdf8;
+    }
+
+    .text-box h3 {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin: 0 0 4px 0;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .text-box .value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    .text-box .subtext {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .progress-bar-bg {
+        height: 6px;
+        background: var(--bg-dark);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        border-radius: 3px;
+    }
+
+    .progress-bar.danger {
+        background: #ef4444;
+    }
+
+    .progress-bar.warning {
+        background: #f59e0b;
+    }
+
+    .progress-bar.info {
+        background: #38bdf8;
+    }
+
+    /* Tabs */
+    .custom-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1px;
+    }
+
+    .tab-link {
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .tab-link:hover {
+        color: var(--text-primary);
+    }
+
+    .tab-link.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+    }
+
+    .tab-link .counter {
+        background: var(--bg-dark);
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+    }
+
+    .tab-link .indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    .indicator.danger {
+        background: #ef4444;
+    }
+
+    .indicator.warning {
+        background: #f59e0b;
+    }
+
+    .indicator.info {
+        background: #38bdf8;
+    }
+
+    /* Table */
+    .modern-table-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .modern-table th {
+        background: var(--bg-dark);
+        padding: 16px 24px;
+        text-align: left;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .modern-table td {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .modern-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .modern-table tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        cursor: pointer;
+        border-width: 1px;
+        border-style: solid;
+        margin-left: 5px;
+    }
+
+    .btn-danger-outline {
+        border-color: #ef4444;
+        color: #ef4444;
+        background: transparent;
+    }
+
+    .btn-danger-outline:hover {
+        background: #ef4444;
+        color: #fff;
+    }
+
+    .btn-primary-outline {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        background: transparent;
+    }
+
+    .btn-primary-outline:hover {
+        background: var(--primary-color);
+        color: #fff;
+    }
+
+    .btn-success-outline {
+        border-color: var(--success-color);
+        color: var(--success-color);
+        background: transparent;
+    }
+
+    .btn-success-outline:hover {
+        background: var(--success-color);
+        color: #fff;
+    }
+
+    .expiry-timer {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .expiry-timer.warning {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+    }
+
+    .empty-state-modern {
+        text-align: center;
+        padding: 60px 20px;
+        background: var(--card-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.8;
+    }
+
+    .empty-icon.success {
+        color: var(--success-color);
+    }
+
+    .empty-icon.info {
+        color: var(--primary-color);
+    }
+</style>
+
+<script>
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-link");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+    function deleteMedicine(id) {
+        if (confirm('Are you sure you want to discard this expired stock? It will be removed from inventory.')) {
+            fetch(`/delete_medicine/${id}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) location.reload();
+                    else alert('Error: ' + data.error);
+                });
+        }
+    }
+
+    function returnToSupplier(id) {
+        alert('Return Process Initiated: An email/WhatsApp draft has been created for the supplier.');
+    }
+
+    function discountSale(id, name) {
+        const discount = prompt(`Enter Discount % for Flash Sale on ${name}:`, "50");
+        if (discount) {
+            alert(`${name} is now live on Flash Sale with ${discount}% OFF! (Simulated)`);
+            // In a real app, this would call an API to update the price
+        }
+    }
+</script>
+{% endblock %}

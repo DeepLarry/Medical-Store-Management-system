@@ -1,0 +1,250 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="inventory-header">
+    <div class="header-title">
+        <h2><i class="fas fa-users"></i> Customers</h2>
+        <p>Manage your customer database efficiently</p>
+    </div>
+    <div class="header-actions" style="display: flex; gap: 15px; align-items: center;">
+        <div class="search-box" style="position: relative;">
+            <i class="fas fa-search"
+                style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+            <input type="text" id="customerSearch" placeholder="Search customers..." onkeyup="filterCustomers()"
+                style="padding: 10px 10px 10px 35px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-primary); width: 250px;">
+        </div>
+        <button class="btn-primary" onclick="openModal('addCustomerModal')">
+            <i class="fas fa-plus"></i> Add Customer
+        </button>
+    </div>
+</div>
+
+<!-- Customer Grid Layout -->
+<div class="customer-grid" id="customerGrid">
+    {% for customer in customers %}
+    <div class="customer-card">
+        <div class="card-header-actions">
+            <!-- Dynamic Avatar with Initials -->
+            <div class="avatar {{ ['bg-indigo', 'bg-pink', 'bg-green', 'bg-amber', 'bg-purple'] | random }}">
+                {{ customer.customer_name[:1].upper() }}
+            </div>
+            <div class="customer-info">
+                <h3>{{ customer.customer_name }}</h3>
+                <span class="customer-id">ID: #{{ customer.customer_id }}</span>
+            </div>
+            <div class="card-actions">
+                <button type="button" class="btn-icon delete" onclick="deleteCustomer('{{ customer.customer_id }}')"
+                    title="Delete Customer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="info-row">
+                <i class="fas fa-phone-alt"></i>
+                <span>{{ customer.phone or 'No Phone' }}</span>
+            </div>
+            <div class="info-row">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ customer.city or 'No City' }}</span>
+            </div>
+        </div>
+
+        <div class="card-footer">
+            <button class="btn-secondary" onclick="window.location.href='tel:{{ customer.phone }}'">
+                <i class="fas fa-phone"></i> Call
+            </button>
+            <button class="btn-secondary" onclick="alert('Feature coming soon: View History')">
+                <i class="fas fa-history"></i> History
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="no-data">
+        <i class="fas fa-users-slash"></i>
+        <p>No customers found in database.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Customer Modal -->
+<div id="addCustomerModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('addCustomerModal')">&times;</span>
+        <h3>Add New Customer</h3>
+        <form action="{{ url_for('customers.add_customer') }}" method="POST">
+            <div class="form-group">
+                <label>Customer Name</label>
+                <input type="text" name="name" required placeholder="Enter full name">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" name="phone" placeholder="Enter phone number">
+            </div>
+            <div class="form-group">
+                <label>City</label>
+                <input type="text" name="city" placeholder="Enter city">
+            </div>
+            <button type="submit" class="btn-submit">Add Customer</button>
+        </form>
+    </div>
+</div>
+
+<!-- Order History Modal -->
+<div id="orderHistoryModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <span class="close" onclick="closeModal('orderHistoryModal')">&times;</span>
+        <h3 id="historyModalTitle">Order History</h3>
+        <div id="orderHistoryContent" class="order-list">
+            <p class="text-muted">Loading...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filterCustomers() {
+        const input = document.getElementById('customerSearch');
+        const filter = input.value.toLowerCase();
+        const grid = document.getElementById('customerGrid');
+        const cards = grid.getElementsByClassName('customer-card');
+        const noData = grid.querySelector('.no-data');
+        let visibleCount = 0;
+
+        for (let i = 0; i < cards.length; i++) {
+            const card = cards[i];
+            const nameEl = card.querySelector('.customer-info h3');
+            const phoneEl = card.querySelector('.info-row span'); // Assuming phone is first
+            const name = nameEl ? nameEl.textContent.toLowerCase() : '';
+            const phone = phoneEl ? phoneEl.textContent.toLowerCase() : '';
+
+            if (name.includes(filter) || phone.includes(filter)) {
+                card.style.display = "";
+                visibleCount++;
+            } else {
+                card.style.display = "none";
+            }
+        }
+
+        // Show/hide no data message based on filter
+        if (noData) {
+            if (visibleCount === 0 && cards.length > 0) {
+                // Clone or unhide noData if hidden. But simplified:
+                // The backend loop renders 'no-data' div only if list is empty. 
+                // So if list had items but filter hides all, we might need a JS 'no results' element.
+            }
+        }
+    }
+
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.style.display = "block";
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.style.display = "none";
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function (event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
+        }
+    }
+
+    async function deleteCustomer(id) {
+        if (!confirm('Are you sure you want to delete this customer? This cannot be undone.')) return;
+
+        try {
+            const response = await fetch(`/delete_customer/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Check if a global toast function exists
+                if (typeof showToast === 'function') {
+                    showToast('Customer deleted successfully', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    alert('Customer deleted successfully');
+                    window.location.reload();
+                }
+            } else {
+                alert('Error deleting customer: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to delete customer');
+        }
+    }
+
+    async function viewOrderHistory(customerId) {
+        const modal = document.getElementById('orderHistoryModal');
+        const content = document.getElementById('orderHistoryContent');
+        const title = document.getElementById('historyModalTitle');
+
+        // Show modal with loading state
+        content.innerHTML = '<div style="text-align:center; padding: 20px;"><div class="loading-spinner"></div><p>Start loading...</p></div>';
+        if (modal) modal.style.display = 'block';
+        if (title) title.textContent = `Order History for ID: ${customerId}`;
+
+        try {
+            const response = await fetch(`/customer_orders/${customerId}`);
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.orders.length > 0) {
+                    let html = '<table style="width:100%; border-collapse: collapse;">';
+                    html += '<thead><tr style="border-bottom: 2px solid #ddd; text-align:left;">';
+                    html += '<th style="padding:10px;">Date</th><th style="padding:10px;">Amount</th><th style="padding:10px;">Items</th><th style="padding:10px;">Mode</th></tr></thead>';
+                    html += '<tbody>';
+
+                    data.orders.forEach(order => {
+                        html += `<tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding:10px;">${order.sale_date}</td>
+                            <td style="padding:10px; font-weight:bold;">₹${order.total_amount}</td>
+                            <td style="padding:10px;">${order.item_count}</td>
+                            <td style="padding:10px;"><span class="badge badge-sm">${order.payment_mode}</span></td>
+                        </tr>`;
+                    });
+
+                    html += '</tbody></table>';
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<div style="text-align:center; padding:30px; color: #666;"><i class="fas fa-shopping-basket" style="font-size: 2rem; margin-bottom: 10px; display:block;"></i>No orders found for this customer.</div>';
+                }
+            } else {
+                content.innerHTML = `<p class="text-danger">Error: ${data.orders && data.orders.error ? data.orders.error : (data.error || 'Unknown error')}</p>`;
+            }
+        } catch (error) {
+            console.error('Error fetching history:', error);
+            content.innerHTML = '<p class="text-danger">Failed to load order history.</p>';
+        }
+    }
+
+    function editCustomer(id) {
+        // Placeholder for edit functionality
+        alert('Edit functionality coming soon for Customer ID: ' + id);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchParam = urlParams.get('search');
+        if (searchParam) {
+            const searchInput = document.getElementById("customerSearch");
+            if (searchInput) {
+                searchInput.value = searchParam;
+                // Add a small delay to ensure cards are rendered if they are dynamic (though here they are static Jinja)
+                setTimeout(filterCustomers, 100);
+            }
+        }
+    });
+</script>
+{% endblock %}

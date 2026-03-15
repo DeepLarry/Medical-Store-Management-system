@@ -1,0 +1,338 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="pos-container">
+
+    <!-- LEFT PANEL: Product Selection -->
+    <div class="pos-left">
+        <div class="pos-card">
+            <h3 class="card-header-title"><i class="fas fa-search"></i> Find Medicine</h3>
+
+            <div class="pos-search-box">
+                <input type="text" id="productSearch" class="pos-search-input"
+                    placeholder="Scan barcode or type name..." oninput="filterMedicines()" autocomplete="off">
+                <div id="searchResults" class="pos-search-results">
+                    <!-- Search Results Injected Here -->
+                </div>
+            </div>
+
+            <div id="selectedProductInfo" class="pos-product-info">
+                <h4 id="selName" style="color: var(--highlight-color); margin-bottom: 10px; font-size: 1.2rem;">Product
+                    Name</h4>
+                <div style="display: flex; justify-content: space-between; font-size: 1rem; margin-bottom: 15px;">
+                    <span style="font-weight: bold; color: var(--success-color);">Price: ₹<span
+                            id="selPrice">0.00</span></span>
+                    <span>Stock: <span id="selStock">0</span></span>
+                </div>
+                <div class="qty-control">
+                    <label>Qty:</label>
+                    <input type="number" id="qtyInput" value="1" min="1" class="qty-input">
+                    <button onclick="addToCart()" class="btn-primary" style="flex: 1; padding: 12px;">
+                        <i class="fas fa-plus"></i> Add (Enter)
+                    </button>
+                </div>
+            </div>
+
+            <div class="pos-shortcuts">
+                <p style="width: 100%; margin-bottom: 10px;"><strong>Shortcuts:</strong></p>
+                <span class="badge">F2: Search</span>
+                <span class="badge">Enter: Add</span>
+                <span class="badge">F10: Checkout</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL: Current Bill -->
+    <div class="pos-right">
+
+        <!-- Order Header -->
+        <div class="cart-header">
+            <h3 style="margin: 0;"><i class="fas fa-receipt"></i> Current Order</h3>
+            <span class="badge" style="background: var(--highlight-color); color: #000; font-weight: bold;">NEW
+                SALE</span>
+        </div>
+
+        <!-- Cart Items Table -->
+        <div class="cart-body">
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th style="width: 80px; text-align: center;">Qty</th>
+                        <th style="width: 100px; text-align: right;">Price</th>
+                        <th style="width: 100px; text-align: right;">Total</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="cartTableBody">
+                    <!-- Cart Items Injected Here -->
+                </tbody>
+            </table>
+            <div id="emptyCartMsg" class="cart-empty-msg">
+                <i class="fas fa-shopping-basket" style="font-size: 4rem; opacity: 0.3; margin-bottom: 20px;"></i>
+                <p style="font-size: 1.2rem;">Cart is Empty</p>
+                <p style="font-size: 0.9rem;">Search for products to start billing</p>
+            </div>
+        </div>
+
+        <!-- Order Footer -->
+        <div class="cart-footer">
+            <div class="payment-details">
+                <div style="flex: 2;">
+                    <label
+                        style="font-size: 0.8em; color: var(--text-secondary); display: block; margin-bottom: 5px;">Customer
+                        Name</label>
+                    <input type="text" id="customerName" placeholder="Walk-in Customer" class="form-control">
+                </div>
+                <div style="flex: 1;">
+                    <label
+                        style="font-size: 0.8em; color: var(--text-secondary); display: block; margin-bottom: 5px;">Payment
+                        Mode</label>
+                    <select id="payMode" class="form-control">
+                        <option value="Cash">Cash</option>
+                        <option value="UPI">UPI</option>
+                        <option value="Card">Card</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pos-total-row">
+                <div style="text-align: left;">
+                    <span style="display: block; color: var(--text-secondary);">Total Items</span>
+                    <strong style="font-size: 1.2rem;" id="totalItems">0</strong>
+                </div>
+                <div style="text-align: right;">
+                    <span style="display: block; color: var(--text-secondary);">Grand Total</span>
+                    <h1 style="color: var(--success-color); margin: 0;">₹<span id="grandTotal">0.00</span></h1>
+                </div>
+            </div>
+
+            <button onclick="processSale()" class="btn-primary checkout-btn">
+                <i class="fas fa-print"></i> CHECKOUT (F10)
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Data container to prevent JS syntax errors in editor -->
+<script id="medicines-data" type="application/json">
+    {{ medicines | tojson }}
+</script>
+
+<script>
+    // Load Medicines from Server-side Template Variable
+    const ALL_MEDICINES = JSON.parse(document.getElementById('medicines-data').textContent);
+    let CART = [];
+    let SELECTED_MED = null;
+
+    // --- Search Logic ---
+    function filterMedicines() {
+        const query = document.getElementById('productSearch').value.trim().toLowerCase();
+        const resultsDiv = document.getElementById('searchResults');
+        resultsDiv.innerHTML = '';
+
+        if (query.length < 1) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        // Search by Name or Barcode
+        const matches = ALL_MEDICINES.filter(m =>
+            m.medicine_name.toLowerCase().includes(query) ||
+            (m.barcode && m.barcode.toString().toLowerCase().includes(query))
+        ).slice(0, 10);
+
+        if (matches.length > 0) {
+            resultsDiv.style.display = 'block';
+            matches.forEach((m, index) => {
+                const div = document.createElement('div');
+                div.className = 'search-result-item';
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between;">
+                        <strong>${m.medicine_name}</strong>
+                        <span style="font-weight: bold; color: var(--success-color);">₹${m.price}</span>
+                    </div>
+                    <div style="font-size: 0.85em; color: var(--text-secondary);">
+                        ${m.barcode ? `<i class="fas fa-barcode"></i> ${m.barcode} | ` : ''} 
+                        Stock: ${m.stock}
+                    </div>
+                `;
+                div.onclick = () => selectMedicine(m);
+                resultsDiv.appendChild(div);
+            });
+
+            // Auto-select if exact barcode match (scanner behavior)
+            if (matches.length === 1 && matches[0].barcode && matches[0].barcode.toString().toLowerCase() === query) {
+                selectMedicine(matches[0]);
+            }
+
+        } else {
+            resultsDiv.style.display = 'none';
+        }
+    }
+
+    function selectMedicine(med) {
+        SELECTED_MED = med;
+        document.getElementById('selName').innerText = med.medicine_name;
+        document.getElementById('selPrice').innerText = med.price;
+        document.getElementById('selStock').innerText = med.stock;
+
+        document.getElementById('selectedProductInfo').style.display = 'block';
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('productSearch').value = ''; // Clear search
+
+        // Focus Quantity
+        setTimeout(() => {
+            const qtyInput = document.getElementById('qtyInput');
+            qtyInput.value = 1;
+            qtyInput.focus();
+            qtyInput.select();
+        }, 10);
+    }
+
+    // --- Cart Logic ---
+    function addToCart() {
+        if (!SELECTED_MED) return;
+
+        const qtyInput = document.getElementById('qtyInput');
+        const qty = parseInt(qtyInput.value);
+
+        if (isNaN(qty) || qty <= 0) {
+            alert("Quantity must be > 0");
+            return;
+        }
+        if (qty > SELECTED_MED.stock) {
+            alert(`Insufficient Stock! Only ${SELECTED_MED.stock} available.`);
+            return;
+        }
+
+        // Check if already in cart
+        const existing = CART.find(i => i.medicine_id === SELECTED_MED.medicine_id);
+        if (existing) {
+            if (existing.quantity + qty > SELECTED_MED.stock) {
+                alert("Cannot add more than available stock!");
+                return;
+            }
+            existing.quantity += qty;
+        } else {
+            CART.push({
+                medicine_id: SELECTED_MED.medicine_id,
+                medicine_name: SELECTED_MED.medicine_name,
+                price: parseFloat(SELECTED_MED.price),
+                quantity: qty,
+                stock: SELECTED_MED.stock // keep track for validation
+            });
+        }
+
+        renderCart();
+
+        // Reset Selection
+        SELECTED_MED = null;
+        document.getElementById('selectedProductInfo').style.display = 'none';
+        document.getElementById('productSearch').focus();
+    }
+
+    function removeFromCart(index) {
+        CART.splice(index, 1);
+        renderCart();
+    }
+
+    function renderCart() {
+        const tbody = document.getElementById('cartTableBody');
+        tbody.innerHTML = '';
+        let total = 0;
+        let totalQty = 0;
+
+        CART.forEach((item, index) => {
+            const rowTotal = item.price * item.quantity;
+            total += rowTotal;
+            totalQty += item.quantity;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.medicine_name}</td>
+                <td style="text-align: center;">${item.quantity}</td>
+                <td style="text-align: right;">₹${item.price.toFixed(2)}</td>
+                <td style="text-align: right;">₹${rowTotal.toFixed(2)}</td>
+                <td style="text-align: center;">
+                    <button onclick="removeFromCart(${index})" style="background: none; border: none; color: var(--danger-color); cursor: pointer;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('emptyCartMsg').style.display = CART.length ? 'none' : 'block';
+        document.getElementById('grandTotal').innerText = total.toFixed(2);
+        document.getElementById('totalItems').innerText = totalQty;
+    }
+
+    // --- Checkout Logic ---
+    async function processSale() {
+        if (CART.length === 0) {
+            alert("Cart is empty!");
+            return;
+        }
+
+        const payload = {
+            items: CART,
+            customer_name: document.getElementById('customerName').value,
+            payment_mode: document.getElementById('payMode').value
+        };
+
+        try {
+            const btn = document.querySelector('.checkout-btn');
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            const res = await fetch("{{ url_for('sales.create_sale') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert("Sale Successful!");
+                CART = [];
+                renderCart();
+                document.getElementById('customerName').value = '';
+                // Optional: Print Bill logic here
+            } else {
+                alert("Error: " + data.message);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+
+        } catch (e) {
+            console.error(e);
+            alert("An error occurred during checkout.");
+            document.querySelector('.checkout-btn').disabled = false;
+        }
+    }
+
+    // --- Keyboard Shortcuts ---
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F2') {
+            e.preventDefault();
+            document.getElementById('productSearch').focus();
+        } else if (e.key === 'F10') {
+            e.preventDefault();
+            processSale();
+        } else if (e.key === 'Enter') {
+            if (document.activeElement.id === 'qtyInput') {
+                addToCart();
+            } else if (document.activeElement.id === 'productSearch' && document.getElementById('searchResults').children.length > 0) {
+                // Logic to select first item handled in filterMedicines if exact match, 
+                // otherwise user should arrow key (not implemented yet, but click works)
+            }
+        }
+    });
+
+</script>
+
+{% endblock %}

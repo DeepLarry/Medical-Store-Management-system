@@ -1,0 +1,675 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="inventory-dashboard">
+    <!-- Header with Stats -->
+    <div class="dashboard-overview">
+        <div class="header-section">
+            <div class="title-area">
+                <h2><i class="fas fa-cubes"></i> Inventory Management</h2>
+                <p>Track stock levels, replenish supplies, and manage product catalog.</p>
+            </div>
+            <div class="header-tools">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="inventorySearch" onkeyup="filterTable()"
+                        placeholder="Search by name, category, SKU...">
+                </div>
+                <button class="btn-primary" onclick="openModal('addMedicineModal')">
+                    <i class="fas fa-plus"></i> Add Product
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-icon"><i class="fas fa-box"></i></div>
+                <div class="stat-det">
+                    <h3>Total Products</h3>
+                    <p>{{ stats.total }}</p>
+                </div>
+            </div>
+            <div class="stat-card value">
+                <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+                <div class="stat-det">
+                    <h3>Stock Value</h3>
+                    <p>₹{{ "{:,.2f}".format(stats.value) }}</p>
+                </div>
+            </div>
+            <div class="stat-card warning {% if stats.low > 0 %}alert{% endif %}">
+                <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-det">
+                    <h3>Low Stock</h3>
+                    <p>{{ stats.low }}</p>
+                </div>
+            </div>
+            <div class="stat-card danger {% if stats.out > 0 %}alert{% endif %}">
+                <div class="stat-icon"><i class="fas fa-ban"></i></div>
+                <div class="stat-det">
+                    <h3>Out of Stock</h3>
+                    <p>{{ stats.out }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Table Card -->
+    <div class="table-card-container">
+        <div class="table-header-tabs">
+            <button class="tab-btn active" onclick="filterStatus('all')">All Items</button>
+            <button class="tab-btn" onclick="filterStatus('low')">Low Stock (<20)< /button>
+                    <button class="tab-btn" onclick="filterStatus('out')">Out of Stock</button>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="saas-table" id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th width="25%">Product Name</th>
+                        <th width="15%">Category</th>
+                        <th width="10%">Stock</th>
+                        <th width="10%">Price</th>
+                        <th width="10%">Map/Cost</th>
+                        <th width="15%">Supplier</th>
+                        <th width="15%" class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for med in medicines %}
+                    <tr class="item-row" data-stock="{{ med.stock }}">
+                        <td>
+                            <div class="product-info">
+                                <span class="p-name">{{ med.medicine_name }}</span>
+                                <span class="p-sku text-muted">{{ med.barcode or 'No SKU' }}</span>
+                            </div>
+                        </td>
+                        <td><span class="badge category">{{ med.category }}</span></td>
+                        <td>
+                            {% if med.stock == 0 %}
+                            <span class="status-badge out">Out of Stock</span>
+                            {% elif med.stock < 20 %} <span class="status-badge low">{{ med.stock }} Units</span>
+                                {% else %}
+                                <span class="status-badge good">{{ med.stock }} Units</span>
+                                {% endif %}
+                        </td>
+                        <td>₹{{ "{:,.2f}".format(med.price) }}</td>
+                        <td class="text-muted">₹{{ "{:,.2f}".format(med.purchase_price) }}</td>
+                        <td>
+                            <div class="supplier-info">
+                                <i class="fas fa-truck text-muted"></i> ID: #{{ med.supplier_id }}
+                            </div>
+                        </td>
+                        <td class="text-right actions-cell">
+                            <button class="action-btn edit" onclick='openEditModal({
+                                id: "{{ med.medicine_id }}",
+                                name: "{{ med.medicine_name }}",
+                                category: "{{ med.category }}",
+                                barcode: "{{ med.barcode }}",
+                                price: "{{ med.price }}",
+                                cost: "{{ med.purchase_price }}",
+                                stock: "{{ med.stock }}",
+                                expiry: "{{ med.expiry_date }}",
+                                supplier: "{{ med.supplier_id }}"
+                            })' title="Edit">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button class="action-btn delete" onclick="deleteMedicine('{{ med.medicine_id }}')"
+                                title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-content">
+                                <i class="fas fa-box-open"></i>
+                                <p>No products in inventory.</p>
+                                <button class="btn-sm btn-primary" onclick="openModal('addMedicineModal')">Add First
+                                    Product</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Medicine Modal -->
+<div id="addMedicineModal" class="modal">
+    <div class="modal-content animate-slide-down">
+        <div class="modal-header">
+            <h3>Add New Product</h3>
+            <span class="close" onclick="closeModal('addMedicineModal')">&times;</span>
+        </div>
+        <form action="{{ url_for('inventory.add_medicine') }}" method="POST">
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Product Name <span class="req">*</span></label>
+                    <input type="text" name="name" required class="saas-input" placeholder="e.g. Paracetamol 500mg">
+                </div>
+
+                <div class="form-group">
+                    <label>Category <span class="req">*</span></label>
+                    <input type="text" name="category" list="categories" required class="saas-input"
+                        placeholder="Type or Select">
+                    <datalist id="categories">
+                        <option value="Tablet">
+                        <option value="Syrup">
+                        <option value="Injection">
+                        <option value="Cream">
+                        <option value="Drops">
+                    </datalist>
+                </div>
+
+                <div class="form-group">
+                    <label>Barcode / SKU</label>
+                    <input type="text" name="barcode" class="saas-input" placeholder="Scan Code">
+                </div>
+
+                <div class="form-section-label">Pricing & Stock</div>
+
+                <div class="form-group">
+                    <label>Cost Price (₹)</label>
+                    <input type="number" step="0.01" name="purchase_price" required class="saas-input"
+                        placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Selling Price (₹)</label>
+                    <input type="number" step="0.01" name="price" required class="saas-input" placeholder="0.00">
+                </div>
+
+                <div class="form-group">
+                    <label>Initial Stock</label>
+                    <input type="number" name="stock" required class="saas-input" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="date" name="expiry_date" required class="saas-input">
+                </div>
+                <div class="form-group full">
+                    <label>Supplier</label>
+                    <select name="supplier_id" required class="saas-input">
+                        {% for sup in suppliers %}
+                        <option value="{{ sup.supplier_id }}">{{ sup.supplier_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-text" onclick="closeModal('addMedicineModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Save Product</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Medicine Modal -->
+<div id="editMedicineModal" class="modal">
+    <div class="modal-content animate-slide-down">
+        <div class="modal-header">
+            <h3>Edit Product</h3>
+            <span class="close" onclick="closeModal('editMedicineModal')">&times;</span>
+        </div>
+        <form action="{{ url_for('inventory.update_medicine') }}" method="POST">
+            <input type="hidden" id="edit_id" name="medicine_id">
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Product Name</label>
+                    <input type="text" id="edit_name" name="name" required class="saas-input">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="text" id="edit_category" name="category" required class="saas-input">
+                </div>
+                <div class="form-group">
+                    <label>SKU/Barcode</label>
+                    <input type="text" id="edit_barcode" name="barcode" class="saas-input">
+                </div>
+                <div class="form-group">
+                    <label>Cost Price</label>
+                    <input type="number" step="0.01" id="edit_cost" name="purchase_price" required class="saas-input">
+                </div>
+                <div class="form-group">
+                    <label>Selling Price</label>
+                    <input type="number" step="0.01" id="edit_price" name="price" required class="saas-input">
+                </div>
+                <div class="form-group">
+                    <label>Stock</label>
+                    <input type="number" id="edit_stock" name="stock" required class="saas-input">
+                </div>
+                <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="date" id="edit_expiry" name="expiry_date" required class="saas-input">
+                </div>
+                <div class="form-group full">
+                    <label>Supplier</label>
+                    <select id="edit_supplier" name="supplier_id" required class="saas-input">
+                        {% for sup in suppliers %}
+                        <option value="{{ sup.supplier_id }}">{{ sup.supplier_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-text" onclick="closeModal('editMedicineModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Update Product</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* SaaS Inventory Styles */
+    .inventory-dashboard {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .header-tools {
+        display: flex;
+        gap: 12px;
+    }
+
+    .search-box {
+        position: relative;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+    }
+
+    .search-box input {
+        padding: 10px 10px 10px 36px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--card-bg);
+        color: var(--text-primary);
+        width: 300px;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card {
+        background: var(--card-bg);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .stat-card.total .stat-icon {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .stat-card.value .stat-icon {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .stat-card.warning .stat-icon {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+    }
+
+    .stat-card.danger .stat-icon {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .stat-card.alert {
+        border-color: rgba(239, 68, 68, 0.5);
+        background: rgba(239, 68, 68, 0.05);
+    }
+
+    .stat-det h3 {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-det p {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 4px 0 0 0;
+    }
+
+    /* Table Card */
+    .table-card-container {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .table-header-tabs {
+        display: flex;
+        padding: 0 20px;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-dark);
+    }
+
+    .tab-btn {
+        padding: 16px 20px;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-weight: 500;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .table-wrapper {
+        padding: 0;
+        overflow-x: auto;
+    }
+
+    .saas-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .saas-table th {
+        padding: 16px 24px;
+        text-align: left;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: 600;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-body);
+    }
+
+    .saas-table td {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    .saas-table tr:hover td {
+        background: rgba(var(--primary-rgb), 0.02);
+    }
+
+    .product-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .p-name {
+        font-weight: 600;
+    }
+
+    .p-sku {
+        font-size: 0.8rem;
+    }
+
+    .badge.category {
+        background: var(--bg-dark);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    .status-badge.good {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .status-badge.low {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+    }
+
+    .status-badge.out {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+        margin-left: 4px;
+    }
+
+    .action-btn:hover {
+        background: var(--bg-dark);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+
+    .action-btn.edit:hover {
+        color: var(--primary-color);
+    }
+
+    .action-btn.delete:hover {
+        color: var(--danger-color);
+    }
+
+    /* Modal Form Grid */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        padding: 20px 0;
+    }
+
+    .form-group.full {
+        grid-column: span 2;
+    }
+
+    .saas-input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-body);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    .saas-input:focus {
+        border-color: var(--primary-color);
+        outline: none;
+    }
+
+    .form-section-label {
+        grid-column: span 2;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        font-weight: 600;
+        margin-top: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px dashed var(--border-color);
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .btn-text {
+        padding: 10px 20px;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+
+    .btn-text:hover {
+        color: var(--text-primary);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px !important;
+    }
+
+    .empty-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-secondary);
+    }
+
+    .empty-content i {
+        font-size: 3rem;
+        opacity: 0.5;
+        margin-bottom: 10px;
+    }
+</style>
+
+<script>
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    window.onclick = function (e) { if (e.target.classList.contains('modal')) e.target.style.display = 'none'; }
+
+    function openEditModal(data) {
+        document.getElementById('edit_id').value = data.id;
+        document.getElementById('edit_name').value = data.name;
+        document.getElementById('edit_category').value = data.category;
+        document.getElementById('edit_barcode').value = data.barcode;
+        document.getElementById('edit_cost').value = data.cost;
+        document.getElementById('edit_price').value = data.price;
+        document.getElementById('edit_stock').value = data.stock;
+        document.getElementById('edit_expiry').value = data.expiry;
+        document.getElementById('edit_supplier').value = data.supplier;
+        openModal('editMedicineModal');
+    }
+
+    function deleteMedicine(id) {
+        if (confirm('Are you sure you want to delete this product?')) {
+            fetch(`/delete_medicine/${id}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => { if (data.success) location.reload(); });
+        }
+    }
+
+    function filterTable() {
+        let input = document.getElementById("inventorySearch");
+        let filter = input.value.toUpperCase();
+        let table = document.getElementById("inventoryTable");
+        let tr = table.getElementsByTagName("tr");
+        for (let i = 1; i < tr.length; i++) {
+            let tdName = tr[i].getElementsByTagName("td")[0]; // Name
+            let tdCat = tr[i].getElementsByTagName("td")[1]; // Category
+            if (tdName || tdCat) {
+                let txtValue = (tdName.textContent || tdName.innerText) + (tdCat.textContent || tdCat.innerText);
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+
+    function filterStatus(status) {
+        // Tab styling
+        let tabs = document.getElementsByClassName('tab-btn');
+        for (let t of tabs) t.classList.remove('active');
+        event.target.classList.add('active');
+
+        // Row filtering
+        let rows = document.getElementsByClassName('item-row');
+        for (let row of rows) {
+            let stock = parseInt(row.getAttribute('data-stock'));
+            if (status === 'all') {
+                row.style.display = '';
+            } else if (status === 'low') {
+                row.style.display = (stock < 20 && stock > 0) ? '' : 'none';
+            } else if (status === 'out') {
+                row.style.display = (stock == 0) ? '' : 'none';
+            }
+        }
+    }
+</script>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchParam = urlParams.get('search');
+        if (searchParam) {
+            const searchInput = document.getElementById('inventorySearch');
+            if (searchInput) {
+                searchInput.value = searchParam;
+                filterTable();
+            }
+        }
+    });
+</script>
+{% endblock %}
+

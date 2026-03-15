@@ -17,6 +17,7 @@
     /* Warm Amber */
     --danger-color: #f87171;
     /* Soft Red */
+    --primary-rgb: 56, 189, 248;
 
     /* Dark Theme (Default) - Deep Midnight */
     --bg-dark: #0f172a;
@@ -31,6 +32,7 @@
     /* Slate 400 (Subtext) */
     --border-color: #334155;
     /* Slate 700 (Borders) */
+    --bg-body: #0b1224;
 
     /* Dimensions */
     --sidebar-width: 260px;
@@ -63,6 +65,7 @@ body.light-theme {
     /* Slate 500 */
     --border-color: #e2e8f0;
     /* Slate 200 */
+    --bg-body: #f3f7fb;
 }
 
 /* 2. Global Resets */
@@ -74,7 +77,10 @@ body.light-theme {
 }
 
 body {
-    background-color: var(--bg-dark);
+    background:
+        radial-gradient(1200px 500px at 0% -10%, rgba(var(--primary-rgb), 0.10), transparent 60%),
+        radial-gradient(1000px 420px at 100% -20%, rgba(52, 211, 153, 0.08), transparent 62%),
+        var(--bg-body);
     color: var(--text-primary);
     overflow-x: hidden;
     min-height: 100vh;
@@ -215,6 +221,156 @@ body {
     position: sticky;
     top: 0;
     z-index: 900;
+    backdrop-filter: blur(8px);
+}
+
+.content-wrapper {
+    animation: fadeInPage 0.35s ease;
+}
+
+@keyframes fadeInPage {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Shared SaaS controls */
+.btn-primary,
+.btn-success,
+.btn-secondary,
+.btn-text {
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-primary {
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(14, 165, 233, 0.28);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(14, 165, 233, 0.34);
+}
+
+.btn-success {
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, #10b981, #34d399);
+    color: #fff;
+}
+
+.btn-secondary {
+    border: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--card-bg) 78%, transparent);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-text {
+    color: var(--text-secondary);
+}
+
+.saas-input,
+.modern-input,
+.modern-textarea,
+.header-search input,
+.search-box input,
+input[type="text"],
+input[type="number"],
+input[type="tel"],
+input[type="date"],
+select,
+textarea {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.saas-input:focus,
+.modern-input:focus,
+.modern-textarea:focus,
+.header-search input:focus,
+.search-box input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
+    outline: none;
+}
+
+/* Unified premium cards */
+.kpi-card,
+.chart-card,
+.table-card,
+.table-card-container,
+.settings-card,
+.supplier-card,
+.customer-card,
+.med-card,
+.stat-card {
+    background: color-mix(in srgb, var(--card-bg) 90%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border-color) 90%, transparent);
+    box-shadow: 0 8px 26px rgba(2, 6, 23, 0.16);
+}
+
+.kpi-card:hover,
+.chart-card:hover,
+.table-card:hover,
+.supplier-card:hover,
+.customer-card:hover,
+.med-card:hover,
+.stat-card:hover {
+    border-color: color-mix(in srgb, var(--primary-color) 48%, var(--border-color));
+    box-shadow: 0 12px 28px rgba(2, 6, 23, 0.24);
+}
+
+/* Better table readability */
+.saas-table thead th,
+.data-table thead th,
+table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: color-mix(in srgb, var(--card-bg) 90%, var(--bg-dark));
+    backdrop-filter: blur(3px);
+}
+
+.saas-table tbody tr:nth-child(even),
+.data-table tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--bg-dark) 18%, transparent);
+}
+
+.saas-table tbody tr:hover,
+.data-table tbody tr:hover {
+    background: rgba(var(--primary-rgb), 0.07);
+}
+
+/* Soft custom scrollbar */
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--text-secondary) 55%, transparent);
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--primary-color) 70%, var(--text-secondary));
 }
 
 .header-search {

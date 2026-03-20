@@ -3,6 +3,10 @@
 ## LIVE DEMO (Vercel)
 **LIVE LINK: https://medicines-store-db-yxfm.vercel.app/dashboard**
 
+**Demo Login**
+- Username: `admin`
+- Password: `admin123`
+
 Note: Agar aapka exact Vercel URL alag hai, is line ko update kar dena. Isko intentionally top par rakha gaya hai taki koi bhi directly open kar sake.
 
 ## Project Overview

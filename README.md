@@ -41,7 +41,6 @@ Is project ka purpose tha in sab problems ko single system me solve karna.
 - Expiry and low-stock alerts
 - Global search support
 - Multi-store style store context (`store_id` based filtering)
-
 ## Tech Stack
 - Backend: Flask
 - Database: PostgreSQL (Neon compatible)
